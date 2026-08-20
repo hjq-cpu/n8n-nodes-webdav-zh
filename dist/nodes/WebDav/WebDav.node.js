@@ -885,21 +885,26 @@ class WebDav {
                             caseSensitive: caseSensitive,
                             filterType: filterType,
                         });
-                        // 构建结果
-                        const returnItems = [];
+                        // 构建结果：返回 found 布尔值 + 结果列表
+                        const found = results.length > 0;
+                        const items = [];
                         for (const item of results) {
-                            returnItems.push({
-                                json: {
-                                    path: item.filename,
-                                    name: item.basename,
-                                    type: item.type,
-                                    size: item.size,
-                                    lastModified: item.lastmod,
-                                    mime: item.mime,
-                                },
+                            items.push({
+                                path: item.filename,
+                                name: item.basename,
+                                type: item.type,
+                                size: item.size,
+                                lastModified: item.lastmod,
+                                mime: item.mime,
                             });
                         }
-                        responseData = returnItems;
+                        responseData = {
+                            json: {
+                                found: found,
+                                count: results.length,
+                                results: items,
+                            },
+                        };
                     }
                     else if (operation === FolderOperation.CREATE) {
                         // 创建文件夹
