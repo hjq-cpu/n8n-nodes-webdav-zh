@@ -675,8 +675,10 @@ class WebDav {
                         // 根据数据来源获取文件内容
                         if (dataSource === DataSource.BINARY) {
                             const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i);
+                            // n8n v2.x: 通过 getBinaryDataBuffer 异步获取真实字节流
+                            // (v2 中 assertBinaryData 仅返回元数据描述, binaryData.data 为 undefined)
+                            fileContent = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
                             const binaryData = this.helpers.assertBinaryData(i, binaryPropertyName);
-                            fileContent = Buffer.from(binaryData.data, 'base64');
                             fileName = binaryData.fileName || path.basename(filePath);
                         }
                         else {
