@@ -70,6 +70,7 @@ var FolderOperation;
     FolderOperation["LIST"] = "list";
     FolderOperation["CREATE"] = "create";
     FolderOperation["DELETE"] = "delete";
+    FolderOperation["SEARCH"] = "search";
 })(FolderOperation || (exports.FolderOperation = FolderOperation = {}));
 // 数据来源
 var DataSource;
@@ -193,6 +194,12 @@ class WebDav {
                             value: FolderOperation.LIST,
                             description: '获取文件夹的内容列表',
                             action: '列出文件夹内容',
+                        },
+                        {
+                            name: '搜索',
+                            value: FolderOperation.SEARCH,
+                            description: '按关键词搜索文件或文件夹',
+                            action: '搜索文件或文件夹',
                         },
                         {
                             name: '创建',
@@ -368,6 +375,115 @@ class WebDav {
                         },
                     },
                     description: '包含文件/文件夹的详细信息（大小、修改时间等）',
+                },
+                // 搜索关键词
+                {
+                    displayName: '搜索关键词',
+                    name: 'searchKeyword',
+                    type: 'string',
+                    default: '',
+                    required: true,
+                    displayOptions: {
+                        show: {
+                            resource: [
+                                ResourceType.FOLDER,
+                            ],
+                            operation: [
+                                FolderOperation.SEARCH,
+                            ],
+                        },
+                    },
+                    description: '搜索文件或文件夹名称的关键词',
+                },
+                // 搜索匹配方式
+                {
+                    displayName: '匹配方式',
+                    name: 'searchMatchType',
+                    type: 'options',
+                    options: [
+                        {
+                            name: '包含',
+                            value: 'contains',
+                        },
+                        {
+                            name: '开头是',
+                            value: 'startsWith',
+                        },
+                        {
+                            name: '结尾是',
+                            value: 'endsWith',
+                        },
+                        {
+                            name: '精确匹配',
+                            value: 'exact',
+                        },
+                        {
+                            name: '正则表达式',
+                            value: 'regex',
+                        },
+                    ],
+                    default: 'contains',
+                    displayOptions: {
+                        show: {
+                            resource: [
+                                ResourceType.FOLDER,
+                            ],
+                            operation: [
+                                FolderOperation.SEARCH,
+                            ],
+                        },
+                    },
+                    description: '搜索关键词的匹配方式',
+                },
+                // 搜索区分大小写
+                {
+                    displayName: '区分大小写',
+                    name: 'searchCaseSensitive',
+                    type: 'boolean',
+                    default: false,
+                    displayOptions: {
+                        show: {
+                            resource: [
+                                ResourceType.FOLDER,
+                            ],
+                            operation: [
+                                FolderOperation.SEARCH,
+                            ],
+                        },
+                    },
+                    description: '搜索时是否区分大小写',
+                },
+                // 搜索过滤类型
+                {
+                    displayName: '过滤类型',
+                    name: 'searchFilterType',
+                    type: 'options',
+                    options: [
+                        {
+                            name: '全部',
+                            value: 'all',
+                        },
+                        {
+                            name: '仅文件',
+                            value: 'file',
+                        },
+                        {
+                            name: '仅文件夹',
+                            value: 'directory',
+                        },
+                    ],
+                    default: 'all',
+                    displayOptions: {
+                        show: {
+                            resource: [
+                                ResourceType.FOLDER,
+                            ],
+                            operation: [
+                                FolderOperation.SEARCH,
+                            ],
+                        },
+                    },
+                    description: '按类型过滤搜索结果',
                 },
                 // 覆盖选项
                 {
@@ -749,6 +865,39 @@ class WebDav {
                                     },
                                 });
                             }
+                        }
+                        responseData = returnItems;
+                    }
+                    else if (operation === FolderOperation.SEARCH) {
+                        // 搜索文件/文件夹
+                        const keyword = this.getNodeParameter('searchKeyword', i);
+                        const matchType = this.getNodeParameter('searchMatchType', i, 'contains');
+                        const caseSensitive = this.getNodeParameter('searchCaseSensitive', i, false);
+                        const filterType = this.getNodeParameter('searchFilterType', i, 'all');
+                        // 检查文件夹是否存在
+                        const exists = await client.exists(filePath);
+                        if (!exists) {
+                            throw new n8n_workflow_1.NodeOperationError(this.getNode(), `文件夹 ${filePath} 在服务器上不存在`);
+                        }
+                        // 执行搜索
+                        const results = await client.search(filePath, keyword, {
+                            matchType: matchType,
+                            caseSensitive: caseSensitive,
+                            filterType: filterType,
+                        });
+                        // 构建结果
+                        const returnItems = [];
+                        for (const item of results) {
+                            returnItems.push({
+                                json: {
+                                    path: item.filename,
+                                    name: item.basename,
+                                    type: item.type,
+                                    size: item.size,
+                                    lastModified: item.lastmod,
+                                    mime: item.mime,
+                                },
+                            });
                         }
                         responseData = returnItems;
                     }

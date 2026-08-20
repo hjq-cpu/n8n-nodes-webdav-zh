@@ -480,6 +480,71 @@ class WebDAVClient {
         }
     }
     /**
+     * 搜索文件/文件夹（递归列出 + 客户端过滤）
+     */
+    async search(dirPath, keyword, options = {}) {
+        try {
+            if (!keyword || keyword.trim() === '') {
+                throw new WebDAVError('搜索关键词不能为空', 400, 'Bad Request');
+            }
+            // 递归获取目录所有内容
+            const allContents = await this.getDirectoryContents(dirPath, { deep: true });
+            // 根据关键词和选项过滤
+            const matchType = options.matchType || 'contains';
+            const caseSensitive = options.caseSensitive || false;
+            const filterType = options.filterType || 'all';
+            const results = allContents.filter(item => {
+                const basename = item.basename;
+                let kw = keyword;
+                let name = basename;
+                if (!caseSensitive) {
+                    kw = keyword.toLowerCase();
+                    name = basename.toLowerCase();
+                }
+                // 按匹配方式过滤
+                let matched = false;
+                switch (matchType) {
+                    case 'contains':
+                        matched = name.includes(kw);
+                        break;
+                    case 'startsWith':
+                        matched = name.startsWith(kw);
+                        break;
+                    case 'endsWith':
+                        matched = name.endsWith(kw);
+                        break;
+                    case 'exact':
+                        matched = (name === kw);
+                        break;
+                    case 'regex':
+                        try {
+                            const re = new RegExp(keyword, caseSensitive ? '' : 'i');
+                            matched = re.test(basename);
+                        }
+                        catch (e) {
+                            matched = false;
+                        }
+                        break;
+                }
+                if (!matched)
+                    return false;
+                // 按类型过滤
+                if (filterType === 'file' && item.type !== 'file')
+                    return false;
+                if (filterType === 'directory' && item.type !== 'directory')
+                    return false;
+                return true;
+            });
+            return results;
+        }
+        catch (error) {
+            if (error instanceof WebDAVError) {
+                throw error;
+            }
+            this.handleError(error, '搜索文件失败');
+        }
+    }
+    /**
      * 辅助方法：创建绝对 URL
      */
     createAbsoluteUrl(path) {
