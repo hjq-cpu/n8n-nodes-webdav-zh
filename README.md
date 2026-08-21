@@ -12,6 +12,7 @@
 - **大文件支持**：上传限制提升至 500MB，针对大文件传输优化
 - **增强的错误处理**：详细的错误信息，包含 HTTP 状态码
 - **正确的 XML 解析**：完美处理 WebDAV PROPFIND 响应，兼容多种命名空间前缀
+- **n8n v2.x 兼容**：适配 Binary Data Manager 新架构，使用 `getBinaryDataBuffer()` 标准接口
 
 ## 安装
 
