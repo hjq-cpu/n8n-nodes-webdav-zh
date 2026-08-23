@@ -219,7 +219,7 @@ class WebDAVClient {
     async exists(filePath) {
         var _a;
         try {
-            const response = await this.axios.head(filePath);
+            const response = await this.axios.head(encodePath(filePath));
             return response.status >= 200 && response.status < 300;
         }
         catch (error) {
@@ -236,7 +236,7 @@ class WebDAVClient {
      */
     async getFileContents(filePath, options = {}) {
         try {
-            const response = await this.axios.get(filePath, {
+            const response = await this.axios.get(encodePath(filePath), {
                 responseType: options.format === 'binary' ? 'arraybuffer' : 'text'
             });
             if (options.format === 'binary') {
@@ -253,7 +253,7 @@ class WebDAVClient {
      */
     async getFileStream(filePath) {
         try {
-            const response = await this.axios.get(filePath, {
+            const response = await this.axios.get(encodePath(filePath), {
                 responseType: 'stream'
             });
             return response.data;
@@ -274,7 +274,7 @@ class WebDAVClient {
                     throw new WebDAVError(`文件 ${filePath} 已存在`, 409, 'Conflict');
                 }
             }
-            await this.axios.put(filePath, data, {
+            await this.axios.put(encodePath(filePath), data, {
                 headers: {
                     'Content-Type': 'application/octet-stream'
                 }
@@ -299,7 +299,7 @@ class WebDAVClient {
                     throw new WebDAVError(`文件 ${filePath} 已存在`, 409, 'Conflict');
                 }
             }
-            await this.axios.put(filePath, stream, {
+            await this.axios.put(encodePath(filePath), stream, {
                 headers: {
                     'Content-Type': 'application/octet-stream'
                 },
@@ -321,7 +321,7 @@ class WebDAVClient {
         try {
             await this.axios.request({
                 method: 'MKCOL',
-                url: dirPath
+                url: encodePath(dirPath)
             });
         }
         catch (error) {
@@ -333,7 +333,7 @@ class WebDAVClient {
      */
     async deleteFile(filePath) {
         try {
-            await this.axios.delete(filePath);
+            await this.axios.delete(encodePath(filePath));
         }
         catch (error) {
             this.handleError(error, '无法删除文件或文件夹');
@@ -353,7 +353,7 @@ class WebDAVClient {
             }
             await this.axios.request({
                 method: 'MOVE',
-                url: source,
+                url: encodePath(source),
                 headers
             });
         }
@@ -375,7 +375,7 @@ class WebDAVClient {
             }
             await this.axios.request({
                 method: 'COPY',
-                url: source,
+                url: encodePath(source),
                 headers
             });
         }
@@ -390,7 +390,7 @@ class WebDAVClient {
         try {
             const response = await this.axios.request({
                 method: 'PROPFIND',
-                url: filePath,
+                url: encodePath(filePath),
                 headers: {
                     'Depth': '0',
                     'Content-Type': 'application/xml; charset=utf-8'
@@ -435,7 +435,7 @@ class WebDAVClient {
             }
             const response = await this.axios.request({
                 method: 'PROPFIND',
-                url: normalizedPath,
+                url: encodePath(normalizedPath),
                 headers: {
                     'Depth': options.deep ? 'infinity' : '1',
                     'Content-Type': 'application/xml; charset=utf-8'
@@ -555,12 +555,26 @@ class WebDAVClient {
             return new URL(path, this.baseURL).toString();
         }
         catch (error) {
-            // 如果无法创建 URL，则直接拼接路径
+            // 如果无法创建 URL，则直接拼接路径（同时编码非 ASCII 字符）
             return this.baseURL.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+            const encoded = encodePath(path);
         }
     }
 }
 exports.WebDAVClient = WebDAVClient;
+/**
+ * 对路径中的非 ASCII 字符进行 URL 编码
+ * 只编码每个路径段，保留 / 分隔符
+ * 解决中文文件夹名在 Linux 服务器上创建失败的问题
+ */
+function encodePath(pathStr) {
+    if (!pathStr) return pathStr;
+    return pathStr
+        .split('/')
+        .map(segment => encodeURIComponent(segment))
+        .join('/');
+}
+
 /**
  * 创建 WebDAV 客户端的工厂函数
  */
