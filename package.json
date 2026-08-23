@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-webdav-zh",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "n8n WebDAV 中文节点 — 集成 WebDAV 服务器的文件操作功能，支持文件上传/下载/复制/移动/删除、文件夹管理，兼容标准 WebDAV、Nextcloud、ownCloud、Microsoft SharePoint 等服务器",
   "license": "MIT",
   "author": {

@@ -217,17 +217,13 @@ class WebDAVClient {
      * 检查文件或文件夹是否存在
      */
     async exists(filePath) {
-        var _a;
         try {
-            const response = await this.axios.head(encodePath(filePath));
-            return response.status >= 200 && response.status < 300;
+            // 使用 PROPFIND 替代 HEAD 来检查资源是否存在
+            // 某些 WebDAV 服务器对 HEAD 请求返回 200 即使资源不存在
+            await this.stat(filePath);
+            return true;
         }
         catch (error) {
-            // 404 表示资源不存在
-            if (axios_1.default.isAxiosError(error) && ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
-                return false;
-            }
-            // 其他错误也返回 false
             return false;
         }
     }
